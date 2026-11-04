@@ -117,7 +117,7 @@ Output ONLY a single valid JSON object matching this schema:
     }
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.6-flash',
       contents,
     });
 

@@ -8,7 +8,7 @@ import { analyzeImagePixels, ImageAnalysisMetrics } from './imageAnalysis';
 
 // Gemini API key from environment configuration
 export const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
-export const GEMINI_MODEL = 'gemini-2.5-flash';
+export const GEMINI_MODEL = 'gemini-3.6-flash';
 
 export type DiagnosisStatus = 'confirmed' | 'probable' | 'healthy' | 'unclear' | 'not_plant';
 
