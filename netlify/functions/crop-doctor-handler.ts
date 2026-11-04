@@ -5,6 +5,54 @@
  */
 
 import { GoogleGenAI } from '@google/genai';
+import fs from 'fs';
+import path from 'path';
+
+/**
+ * Resolves the Gemini API key from environment or local .env file
+ */
+function resolveGeminiApiKey(): string {
+  if (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'your_gemini_api_key_here') {
+    return process.env.GEMINI_API_KEY;
+  }
+  if (process.env.GOOGLE_API_KEY && process.env.GOOGLE_API_KEY !== 'your_gemini_api_key_here') {
+    return process.env.GOOGLE_API_KEY;
+  }
+  if (process.env.VITE_GEMINI_API_KEY && process.env.VITE_GEMINI_API_KEY !== 'your_gemini_api_key_here') {
+    return process.env.VITE_GEMINI_API_KEY;
+  }
+
+  // In test suites, do not inspect local .env if env vars were intentionally cleared
+  if (process.env.NODE_ENV === 'test' || process.env.VITEST) {
+    return '';
+  }
+
+  try {
+    const envPaths = [
+      path.resolve(process.cwd(), '.env'),
+      path.resolve(__dirname, '../../.env'),
+      path.resolve(__dirname, '../.env'),
+    ];
+    for (const envPath of envPaths) {
+      if (fs.existsSync(envPath)) {
+        const content = fs.readFileSync(envPath, 'utf8');
+        const match =
+          content.match(/^GEMINI_API_KEY=(.*)$/m) ||
+          content.match(/^GOOGLE_API_KEY=(.*)$/m) ||
+          content.match(/^VITE_GEMINI_API_KEY=(.*)$/m);
+        if (match && match[1]?.trim()) {
+          const key = match[1].trim();
+          if (key && key !== 'your_gemini_api_key_here') {
+            process.env.GEMINI_API_KEY = key;
+            return key;
+          }
+        }
+      }
+    }
+  } catch {}
+
+  return '';
+}
 
 export interface CropDoctorDiagnosis {
   crop_name: string;
@@ -207,11 +255,7 @@ export function safeParseGeminiJson(rawText: string): CropDoctorDiagnosis {
  * Primary handler for AI Crop Doctor requests
  */
 export async function handleCropDoctorRequest(payload: any): Promise<CropDoctorHandlerResult> {
-  const apiKey =
-    process.env.GEMINI_API_KEY ||
-    process.env.GOOGLE_API_KEY ||
-    process.env.VITE_GEMINI_API_KEY ||
-    '';
+  const apiKey = resolveGeminiApiKey();
 
   if (!apiKey || apiKey === 'your_gemini_api_key_here') {
     return {
@@ -266,12 +310,15 @@ export async function handleCropDoctorRequest(payload: any): Promise<CropDoctorH
     ];
   }
 
-  const candidateModels = [
-    process.env.GEMINI_MODEL,
-    'gemini-2.5-flash',
-    'gemini-2.0-flash',
-    'gemini-1.5-flash',
-  ].filter(Boolean) as string[];
+  const candidateModels = Array.from(
+    new Set([
+      process.env.GEMINI_MODEL || 'gemini-3.6-flash',
+      'gemini-3.6-flash',
+      'gemini-3.7-flash',
+      'gemini-flash-latest',
+      'gemini-3.8-flash',
+    ])
+  );
 
   const ai = new GoogleGenAI({ apiKey });
 
@@ -308,6 +355,7 @@ export async function handleCropDoctorRequest(payload: any): Promise<CropDoctorH
     } catch (err: any) {
       lastError = err;
       const errMsg = err?.message || String(err);
+      const lower = errMsg.toLowerCase();
 
       // If invalid API key, fail immediately without retrying other models
       if (
@@ -340,8 +388,18 @@ export async function handleCropDoctorRequest(payload: any): Promise<CropDoctorH
         };
       }
 
-      // If model not found, loop to next candidate model
-      if (errMsg.includes('not found') || errMsg.includes('404') || errMsg.includes('unsupported')) {
+      // If model not found or temporarily unavailable, try next candidate model
+      if (
+        lower.includes('not found') ||
+        lower.includes('not_found') ||
+        lower.includes('404') ||
+        lower.includes('no longer available') ||
+        lower.includes('unsupported') ||
+        lower.includes('unavailable') ||
+        lower.includes('503') ||
+        err?.status === 404 ||
+        err?.status === 503
+      ) {
         continue;
       }
 
@@ -372,3 +430,4 @@ export async function handleCropDoctorRequest(payload: any): Promise<CropDoctorH
     },
   };
 }
+
