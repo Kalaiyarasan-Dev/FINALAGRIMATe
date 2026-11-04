@@ -277,6 +277,108 @@ export const fallbackDiseaseDatabase: Record<string, Record<string, DiagnosisRes
       safetyWarningTa: 'பாதுகாப்பு: பூச்சி மருந்து தெளிக்கும் போது உடலை முழுமையாக மூடும் ஆடைகளை அணியவும்.',
     },
   },
+  vegetable: {
+    powdery_mildew: {
+      status: 'confirmed',
+      cropDetectedEn: 'Vegetable / Bhendi / Cucurbits (Abelmoschus esculentus)',
+      cropDetectedTa: 'காய்கறி / வெண்டை / கொடி பயிர்கள்',
+      diseaseEn: 'Powdery Mildew (Erysiphe cichoracearum)',
+      diseaseTa: 'சாம்பல் நோய் (பூஞ்சை தாக்குதல்)',
+      confidence: 92,
+      confidenceExplanationEn: 'Dense flour-like superficial white fungal mycelium and powdery spore growth covering the upper leaf surfaces.',
+      confidenceExplanationTa: 'இலையின் மேல் பரப்பில் மாவு போன்ற வெள்ளை பூஞ்சை படலம் படர்ந்துள்ளதால் சாம்பல் நோய் உறுதி செய்யப்படுகிறது.',
+      severity: 'medium',
+      uncertain: false,
+      symptomsEn: [
+        'White talcum-powder-like patches on upper and lower leaf surfaces',
+        'Leaves turn pale yellow, curl upwards, and dry prematurely',
+        'Severe defoliation and reduction in photosynthetic flower bud formation'
+      ],
+      symptomsTa: [
+        'இலைகளின் மேல் மற்றும் கீழ் பகுதியில் வெள்ளை மாவு போன்ற படலம்',
+        'இலைகள் மஞ்சளாகி மேல்நோக்கி சுருண்டு காய்ந்து உதிர்தல்',
+        'செடியின் ஒளிச்சேர்க்கை குறைந்து பூ மற்றும் பிஞ்சுகள் உதிர்தல்'
+      ],
+      possibleCausesEn: [
+        'Dry warm daytime temperatures (28-34°C) with high relative humidity at night',
+        'Crowded planting and dense canopy preventing sunlight penetration',
+        'Air currents carrying powdery fungal conidiospores from nearby hosts'
+      ],
+      possibleCausesTa: [
+        'பகல் நேர வெப்பமும் இரவு நேர அதிக ஈரப்பதமும் இணைந்த தட்பவெப்பம்',
+        'அடர்த்தியான நடவு மற்றும் பயிர்களுக்கு இடையே போதிய சூரிய ஒளி இல்லாமை'
+      ],
+      chemicalRemedyEn: 'Foliar spray of Wettable Sulphur 80% WP @ 2.5g/L or Dinocap 48% EC @ 1ml/L or Hexaconazole 5% EC @ 1ml/L. Repeat after 12 days.',
+      chemicalRemedyTa: 'நனையும் கந்தகம் (2.5கி/லி) அல்லது ஹெக்சாகோனசோல் 5% EC (1மிலி/லி) இலைகளில் தெளிக்கவும்.',
+      organicRemedyEn: 'Spray diluted fresh sour buttermilk (10%) or 0.5% Potassium Bicarbonate solution or 3% Neem seed kernel extract (NSKE).',
+      organicRemedyTa: 'புளித்த மோர் கரைசல் (10%) அல்லது 3% வேப்பங்கொட்டை சாறு தெளிக்கவும்.',
+      preventionEn: [
+        'Maintain optimum plant-to-plant spacing to facilitate cross-ventilation',
+        'Collect and burn severely infected leaves to check spore dispersion',
+        'Avoid excessive urea/nitrogen applications during dry periods'
+      ],
+      preventionTa: [
+        'செடிகளுக்கு இடையே போதிய இடைவெளி விட்டு காற்றோட்டம் இருக்குமாறு நடவும்',
+        'பாதிக்கப்பட்ட இலைகளை பறித்து தீயிட்டு அழிக்கவும்',
+        'அதிகப்படியான யூரியா இடுவதை தவிர்க்கவும்'
+      ],
+      expertConsultationEn: 'Consult Assistant Director of Horticulture if white powder covers more than 20% of the leaf canopy before fruit set.',
+      expertConsultationTa: 'காய் பிடிக்கும் முன் 20%-க்கு மேல் சாம்பல் நோய் பரவினால் தோட்டக்கலை அலுவலரை அணுகவும்.',
+      safetyWarningEn: 'Chemical Precaution: Never spray wettable sulphur when temperatures exceed 35°C to avoid sulfur-induced leaf burn.',
+      safetyWarningTa: 'பாதுகாப்பு: பகல் வெப்பநிலை 35°C-க்கு மேல் இருக்கும் போது கந்தக மருந்துகளை தெளிக்கக் கூடாது.',
+    },
+  },
+  chilli: {
+    anthracnose: {
+      status: 'confirmed',
+      cropDetectedEn: 'Chilli / Capsicum (Capsicum annuum)',
+      cropDetectedTa: 'மிளகாய் (Capsicum annuum)',
+      diseaseEn: 'Chilli Anthracnose / Fruit Rot (Colletotrichum capsici)',
+      diseaseTa: 'மிளகாய் பழ அழுகல் மற்றும் அந்த்ராக்னோஸ் நோய்',
+      confidence: 91,
+      confidenceExplanationEn: 'Sunken circular or oblong necrotic lesions on ripe chilli fruits with concentric rings of microscopic black fruiting bodies (acervuli).',
+      confidenceExplanationTa: 'பழுத்த மிளகாய் காய்களில் வட்ட வடிவ பள்ளமான கருகல் புள்ளிகள் மற்றும் பூஞ்சை வளையங்கள் காணப்படுகின்றன.',
+      severity: 'high',
+      uncertain: false,
+      symptomsEn: [
+        'Circular or oblong sunken lesions with concentric rings on ripe fruits',
+        'Black pinhead-sized fungal acervuli dots arranged concentrically in spots',
+        'Die-back drying of tender shoots from top to bottom (twig blight)'
+      ],
+      symptomsTa: [
+        'பழுத்த மிளகாயில் பள்ளமான வட்ட வடிவ கருகல் புள்ளிகள்',
+        'புள்ளிகளில் வளைய வடிவில் காணப்படும் கருப்பு நிற பூஞ்சை வித்துக்கள்',
+        'செடியின் நுனி கிளைகள் மேலிருந்து கீழ் நோக்கி காய்ந்து போகுதல் (நுனி கருகல்)'
+      ],
+      possibleCausesEn: [
+        'Heavy dew or rain showers during fruit ripening stage',
+        'Continuous monoculture of solanaceous crops in poorly drained clay soils',
+        'High humidity (>80%) accompanied by warm temperatures (27-30°C)'
+      ],
+      possibleCausesTa: [
+        'காய் பழுக்கும் பருவத்தில் பெய்யும் மழை அல்லது தொடர் பனிப்பொழிவு',
+        'வடிகால் வசதி இல்லாத நிலங்களில் அதிக ஈரப்பதம் தங்குதல்'
+      ],
+      chemicalRemedyEn: 'Spray Azoxystrobin 18.2% + Difenoconazole 11.4% SC @ 1ml/L or Copper Oxychloride 50 WP @ 3g/L or Mancozeb 75 WP @ 2g/L.',
+      chemicalRemedyTa: 'அஸாக்சிஸ்ட்ரோபின் + டைபினோகோனசோல் (1மிலி/லி) அல்லது காப்பர் ஆக்சிகுளோரைடு (3கி/லி) தெளிக்கவும்.',
+      organicRemedyEn: 'Seed treatment and foliar spray with Pseudomonas fluorescens @ 10g/L + Trichoderma viride @ 5g/L. Remove mummified fruits.',
+      organicRemedyTa: 'சூடோமோனாஸ் (10கி/லி) மற்றும் டிரைக்கோடெர்மா (5கி/லி) தெளிக்கவும். அழுகிய மிளகாய்களை அப்புறப்படுத்தவும்.',
+      preventionEn: [
+        'Use certified disease-free seeds treated with bio-agents',
+        'Avoid flood or overhead sprinkler irrigation during pod development',
+        'Practice 2-year crop rotation with non-host crops like pulses or maize'
+      ],
+      preventionTa: [
+        'உயிர் பூஞ்சாணக்கொல்லி கொண்டு விதை நேர்த்தி செய்யவும்',
+        'காய் பிடிக்கும் பருவத்தில் தெளிப்பு நீர்ப்பாசனத்தை தவிர்க்கவும்',
+        'பயிர் சுழற்சி முறையை கடைபிடிக்கவும்'
+      ],
+      expertConsultationEn: 'Consult Horticultural Officer if fruit lesions appear on more than 10% of green and red pods in the field.',
+      expertConsultationTa: 'வயலில் 10%-க்கு மேல் காய்களில் அழுகல் தென்பட்டால் உடனடியாக தோட்டக்கலை அலுவலரை அணுகவும்.',
+      safetyWarningEn: 'Pesticide Caution: Observe a strict waiting period (PHI) of 5 days before harvesting chilli pods after chemical treatment.',
+      safetyWarningTa: 'பாதுகாப்பு: மருந்து தெளித்த 5 நாட்களுக்குள் மிளகாய் அறுவடை செய்யக்கூடாது.',
+    },
+  },
 };
 
 /**
@@ -329,11 +431,19 @@ export async function classifyLocallyFromImageMetrics(
     return fallbackDiseaseDatabase.tomato.curl_virus;
   }
 
-  if (lowerHint.includes('blast') || lowerHint.includes('rice')) {
+  if (lowerHint.includes('powder') || lowerHint.includes('mildew') || metrics.detectedPattern === 'rust_powder') {
+    return fallbackDiseaseDatabase.vegetable.powdery_mildew;
+  }
+
+  if (lowerHint.includes('anthracnose') || lowerHint.includes('chilli') || lowerHint.includes('fruit rot')) {
+    return fallbackDiseaseDatabase.chilli.anthracnose;
+  }
+
+  if (lowerHint.includes('blast') || lowerHint.includes('rice') || lowerHint.includes('spindle')) {
     return fallbackDiseaseDatabase.paddy.blast;
   }
 
-  if (lowerHint.includes('boll') || lowerHint.includes('cotton') || lowerHint.includes('worm')) {
+  if (lowerHint.includes('boll') || lowerHint.includes('cotton') || lowerHint.includes('worm') || lowerHint.includes('hole') || lowerHint.includes('caterpillar')) {
     return fallbackDiseaseDatabase.cotton.bollworm;
   }
 
@@ -636,6 +746,8 @@ function getFallbackSymptomDiagnosis(crop: string, symptoms: string[]): Diagnosi
     return fallbackDiseaseDatabase.tomato.early_blight;
   } else if (crop === 'cotton') {
     return fallbackDiseaseDatabase.cotton.bollworm;
+  } else if (crop === 'chilli') {
+    return fallbackDiseaseDatabase.chilli.anthracnose;
   }
   return fallbackDiseaseDatabase.paddy.blight;
 }

@@ -87,6 +87,31 @@ describe('Crop Doctor Image Analysis & Disease Identification Accuracy', () => {
     // Verify all results are distinct
     expect(paddyBlast.diseaseEn).not.toBe(tomatoCurl.diseaseEn);
     expect(tomatoCurl.diseaseEn).not.toBe(cottonBollworm.diseaseEn);
+
+    // 4. Different diseases affecting the SAME crop (Tomato Early Blight vs Tomato Leaf Curl)
+    const tomatoEarlyBlight = await classifyLocallyFromImageMetrics(
+      'data:image/jpeg;base64,/9j/4AAQSkZJRg==',
+      'tomato leaf spot target lesions'
+    );
+    expect(tomatoEarlyBlight.cropDetectedEn).toContain('Tomato');
+    expect(tomatoEarlyBlight.diseaseEn).toContain('Early Blight');
+    expect(tomatoEarlyBlight.diseaseEn).not.toBe(tomatoCurl.diseaseEn);
+
+    // 5. Powdery Mildew
+    const powderyMildew = await classifyLocallyFromImageMetrics(
+      'data:image/jpeg;base64,/9j/4AAQSkZJRg==',
+      'powdery mildew white talc'
+    );
+    expect(powderyMildew.diseaseEn).toContain('Powdery Mildew');
+    expect(powderyMildew.diseaseTa).toContain('சாம்பல் நோய்');
+
+    // 6. Chilli Anthracnose fruit rot
+    const chilliRot = await classifyLocallyFromImageMetrics(
+      'data:image/jpeg;base64,/9j/4AAQSkZJRg==',
+      'chilli fruit rot anthracnose'
+    );
+    expect(chilliRot.cropDetectedEn).toContain('Chilli');
+    expect(chilliRot.diseaseEn).toContain('Anthracnose');
   });
 
   it('contains all 8 required display points in both English and Tamil', async () => {
