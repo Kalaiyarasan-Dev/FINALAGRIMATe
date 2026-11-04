@@ -201,3 +201,4 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
 };
 
 export default ForgotPasswordModal;
+

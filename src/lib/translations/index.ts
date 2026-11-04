@@ -15,3 +15,4 @@ export const getTranslation = (lang: Language, key: TranslationKey): string => {
 };
 
 export { en, ta };
+

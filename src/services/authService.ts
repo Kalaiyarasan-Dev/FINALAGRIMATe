@@ -431,3 +431,4 @@ export function destroySession(): void {
     console.error('Failed to destroy session:', e);
   }
 }
+
