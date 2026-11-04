@@ -61,7 +61,7 @@ export interface CropInfo {
   optimalTempMax: number;
   waterNeed: 'low' | 'moderate' | 'high' | 'very_high';
   floodSensitivity: 'low' | 'medium' | 'high' | 'critical';
-  windSensitivity: 'low' | 'medium' | 'high';
+  windSensitivity: 'low' | 'medium' | 'high' | 'critical';
   growthStages: string[];
 }
 
