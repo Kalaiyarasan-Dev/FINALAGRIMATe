@@ -1,219 +1,212 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase, isSupabaseConfigured, UserProfile } from '@/lib/supabaseClient';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import {
+  UserProfile,
+  AuthSession,
+  SignUpParams,
+  getActiveSession,
+  authenticateFarmer,
+  registerFarmer,
+  resetFarmerPassword,
+  updateFarmerProfile,
+  destroySession,
+  getStoredUsers,
+} from '@/services/authService';
+import { useLanguage } from './LanguageContext';
+import { isSupabaseConfigured } from '@/lib/supabaseClient';
+
+export interface AuthUser {
+  id: string;
+  email?: string;
+  phone?: string;
+  name: string;
+}
 
 interface AuthContextType {
-  user: User | null;
-  session: Session | null;
+  user: AuthUser | null;
+  session: AuthSession | null;
   profile: UserProfile | null;
   loading: boolean;
   isConfigured: boolean;
-  signUpWithPhone: (phone: string, name: string, district: string) => Promise<{ error: Error | null }>;
-  signInWithPhone: (phone: string, otp: string) => Promise<{ error: Error | null }>;
+  login: (identifier: string, password: string, rememberMe?: boolean) => Promise<{ error: Error | null }>;
+  register: (params: SignUpParams) => Promise<{ error: Error | null }>;
+  resetPassword: (identifier: string, newPassword: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<UserProfile>) => Promise<{ error: Error | null }>;
   refreshProfile: () => Promise<void>;
+  // Legacy backward compatibility
+  signUpWithPhone: (phone: string, name: string, district: string) => Promise<{ error: Error | null }>;
+  signInWithPhone: (phone: string, otp: string) => Promise<{ error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Helper to convert phone number into a consistent internal identity
-const phoneToEmail = (phone: string) => {
-  const cleanPhone = phone.replace(/\D/g, '');
-  return `farmer_${cleanPhone}@farmergenz.internal`;
-};
-
-// Deterministic internal secret for demo phone authentication
-const phoneToPassword = (phone: string) => {
-  const cleanPhone = phone.replace(/\D/g, '');
-  return `fgz_farmer_${cleanPhone}_pwd`;
-};
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const { setLanguage } = useLanguage();
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [session, setSession] = useState<AuthSession | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Load profile from Supabase profiles table
-  const fetchProfile = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (!error && data) {
-        setProfile(data as UserProfile);
-        // Sync to localStorage so existing UI reading vivasayi_profile stays consistent
-        localStorage.setItem(
-          'vivasayi_profile',
-          JSON.stringify({
-            name: data.name,
-            district: data.district || 'Thanjavur',
-            landSize: String(data.land_size || '5'),
-          })
-        );
-      }
-    } catch (err) {
-      console.warn('Profile fetch error:', err);
-    }
-  };
-
+  // Initialize session on mount
   useEffect(() => {
-    // Initial session check
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      }
-      setLoading(false);
-    });
+    const initAuth = async () => {
+      try {
+        // Ensure initial demo data is ready
+        await getStoredUsers();
 
-    // Listen for auth state changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        await fetchProfile(session.user.id);
-      } else {
-        setProfile(null);
-      }
-      setLoading(false);
-    });
+        const activeSession = getActiveSession();
+        if (activeSession && activeSession.user) {
+          setSession(activeSession);
+          setProfile(activeSession.user);
+          setUser({
+            id: activeSession.user.id,
+            email: activeSession.user.email,
+            phone: activeSession.user.phone,
+            name: activeSession.user.name,
+          });
 
-    return () => {
-      subscription.unsubscribe();
+          // Sync saved preferred language if available
+          if (activeSession.user.preferred_language) {
+            setLanguage(activeSession.user.preferred_language);
+          }
+        }
+      } catch (e) {
+        console.error('Auth initialization error:', e);
+      } finally {
+        setLoading(false);
+      }
     };
+
+    initAuth();
+  }, [setLanguage]);
+
+  const login = useCallback(
+    async (identifier: string, password: string, rememberMe: boolean = true) => {
+      try {
+        const { user: userProfile, session: authSession } = await authenticateFarmer(
+          identifier,
+          password,
+          rememberMe
+        );
+
+        setSession(authSession);
+        setProfile(userProfile);
+        setUser({
+          id: userProfile.id,
+          email: userProfile.email,
+          phone: userProfile.phone,
+          name: userProfile.name,
+        });
+
+        if (userProfile.preferred_language) {
+          setLanguage(userProfile.preferred_language);
+        }
+
+        return { error: null };
+      } catch (err: any) {
+        return { error: err instanceof Error ? err : new Error(String(err)) };
+      }
+    },
+    [setLanguage]
+  );
+
+  const register = useCallback(
+    async (params: SignUpParams) => {
+      try {
+        const { user: userProfile, session: authSession } = await registerFarmer(params);
+
+        setSession(authSession);
+        setProfile(userProfile);
+        setUser({
+          id: userProfile.id,
+          email: userProfile.email,
+          phone: userProfile.phone,
+          name: userProfile.name,
+        });
+
+        if (params.preferredLanguage) {
+          setLanguage(params.preferredLanguage);
+        }
+
+        return { error: null };
+      } catch (err: any) {
+        return { error: err instanceof Error ? err : new Error(String(err)) };
+      }
+    },
+    [setLanguage]
+  );
+
+  const resetPassword = useCallback(async (identifier: string, newPassword: string) => {
+    try {
+      await resetFarmerPassword(identifier, newPassword);
+      return { error: null };
+    } catch (err: any) {
+      return { error: err instanceof Error ? err : new Error(String(err)) };
+    }
   }, []);
 
-  const signUpWithPhone = async (phone: string, name: string, district: string) => {
-    try {
-      const email = phoneToEmail(phone);
-      const password = phoneToPassword(phone);
-
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name,
-            phone,
-            district,
-          },
-        },
-      });
-
-      if (error) {
-        // If already exists, try signing in
-        if (error.message.includes('already registered')) {
-          const { error: signInError } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-          });
-          if (signInError) return { error: signInError };
-        } else {
-          return { error };
-        }
-      }
-
-      const activeUser = data?.user ?? (await supabase.auth.getUser()).data.user;
-      if (activeUser) {
-        // Upsert profile record in public.profiles
-        const profilePayload = {
-          id: activeUser.id,
-          phone,
-          name,
-          district,
-          state: 'Tamil Nadu',
-          land_size: 5,
-          preferred_language: 'ta',
-          updated_at: new Date().toISOString(),
-        };
-
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .upsert(profilePayload);
-
-        if (!profileError) {
-          await fetchProfile(activeUser.id);
-        }
-      }
-
-      return { error: null };
-    } catch (err: any) {
-      return { error: err };
-    }
-  };
-
-  const signInWithPhone = async (phone: string, _otp: string) => {
-    try {
-      const email = phoneToEmail(phone);
-      const password = phoneToPassword(phone);
-
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) {
-        // If user doesn't exist yet, create account transparently
-        if (error.message.toLowerCase().includes('invalid login credentials') || error.message.toLowerCase().includes('user not found')) {
-          return await signUpWithPhone(phone, 'Farmer', 'Thanjavur');
-        }
-        return { error };
-      }
-
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await fetchProfile(user.id);
-      }
-
-      return { error: null };
-    } catch (err: any) {
-      return { error: err };
-    }
-  };
-
-  const signOut = async () => {
-    await supabase.auth.signOut();
+  const signOut = useCallback(async () => {
+    destroySession();
     setUser(null);
     setSession(null);
     setProfile(null);
-  };
+  }, []);
 
-  const updateProfile = async (data: Partial<UserProfile>) => {
-    if (!user) return { error: new Error('User not authenticated') };
+  const updateProfile = useCallback(
+    async (data: Partial<UserProfile>) => {
+      if (!profile) return { error: new Error('User not authenticated') };
 
-    try {
-      const payload = {
-        ...data,
-        updated_at: new Date().toISOString(),
-      };
+      try {
+        const updated = await updateFarmerProfile(profile.id, data);
+        setProfile(updated);
+        setUser((prev) => (prev ? { ...prev, name: updated.name } : null));
 
-      const { error } = await supabase
-        .from('profiles')
-        .update(payload)
-        .eq('id', user.id);
+        if (data.preferred_language) {
+          setLanguage(data.preferred_language);
+        }
 
-      if (error) return { error };
+        return { error: null };
+      } catch (err: any) {
+        return { error: err instanceof Error ? err : new Error(String(err)) };
+      }
+    },
+    [profile, setLanguage]
+  );
 
-      await fetchProfile(user.id);
-      return { error: null };
-    } catch (err: any) {
-      return { error: err };
+  const refreshProfile = useCallback(async () => {
+    const active = getActiveSession();
+    if (active?.user) {
+      setProfile(active.user);
+      setUser({
+        id: active.user.id,
+        email: active.user.email,
+        phone: active.user.phone,
+        name: active.user.name,
+      });
     }
-  };
+  }, []);
 
-  const refreshProfile = async () => {
-    if (user) {
-      await fetchProfile(user.id);
-    }
-  };
+  // Legacy helper methods
+  const signUpWithPhone = useCallback(
+    async (phone: string, name: string, district: string) => {
+      return register({
+        phone,
+        name,
+        district,
+        password: `Farmer_${phone.slice(-4)}@123`,
+        preferredLanguage: 'ta',
+      });
+    },
+    [register]
+  );
+
+  const signInWithPhone = useCallback(
+    async (phone: string, _otp: string) => {
+      // Find user or login with demo
+      return login(phone, 'Farmer@123', true);
+    },
+    [login]
+  );
 
   return (
     <AuthContext.Provider
@@ -223,11 +216,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         profile,
         loading,
         isConfigured: isSupabaseConfigured,
-        signUpWithPhone,
-        signInWithPhone,
+        login,
+        register,
+        resetPassword,
         signOut,
         updateProfile,
         refreshProfile,
+        signUpWithPhone,
+        signInWithPhone,
       }}
     >
       {children}

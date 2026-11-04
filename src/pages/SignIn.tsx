@@ -1,156 +1,257 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Phone, ArrowRight, Loader2, KeyRound } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Phone, Lock, Eye, EyeOff, ArrowRight, Loader2, Sprout, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { Sprout } from 'lucide-react';
+import { LanguageSwitcher } from '@/components/common/LanguageSwitcher';
+import { ForgotPasswordModal } from '@/components/auth/ForgotPasswordModal';
 
-const SignIn = () => {
-    const { isTamil } = useLanguage();
-    const { signInWithPhone } = useAuth();
-    const navigate = useNavigate();
-    const [loading, setLoading] = useState(false);
-    const [step, setStep] = useState<'phone' | 'otp'>('phone');
-    const [phone, setPhone] = useState('');
-    const [otp, setOtp] = useState('');
+const SignIn: React.FC = () => {
+  const { isTamil, t } = useLanguage();
+  const { login, user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
 
-    const handleSendOtp = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (phone.length < 10) {
-            toast.error(isTamil ? 'செல்லுபடியாகும் தொலைபேசி எண்ணை உள்ளிடவும்' : 'Please enter a valid phone number');
-            return;
-        }
-        setLoading(true);
-        setTimeout(() => {
-            setLoading(false);
-            setStep('otp');
-            toast.success(isTamil ? 'OTP அனுப்பப்பட்டது: 1234' : 'OTP sent: 1234');
-        }, 800);
-    };
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [forgotModalOpen, setForgotModalOpen] = useState(false);
 
-    const handleVerifyOtp = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (otp !== '1234') {
-            toast.error(isTamil ? 'தவறான OTP' : 'Invalid OTP');
-            return;
-        }
-        setLoading(true);
-        const { error } = await signInWithPhone(phone, otp);
-        setLoading(false);
-        if (error) {
-            toast.error(error.message);
-            return;
-        }
-        toast.success(isTamil ? 'வெற்றிகரமாக உள்நுழைந்தது' : 'Successfully signed in');
-        navigate('/');
-    };
+  // If already logged in, redirect to dashboard or redirect destination
+  useEffect(() => {
+    if (!authLoading && user) {
+      const searchParams = new URLSearchParams(location.search);
+      const redirect = searchParams.get('redirect') || '/';
+      navigate(redirect, { replace: true });
+    }
+  }, [user, authLoading, navigate, location]);
 
-    return (
-        <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 relative">
-            <button
-                onClick={() => navigate('/')}
-                className="absolute top-4 left-4 p-2 rounded-full bg-muted/50 hover:bg-muted transition-colors"
-            >
-                <ArrowRight className="w-5 h-5 text-muted-foreground rotate-180" />
-            </button>
-            <div className="w-full max-w-md space-y-8 animate-fade-in">
-                <div className="text-center space-y-2">
-                    <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                        <Sprout className="w-8 h-8 text-primary" />
-                    </div>
-                    <h1 className={cn('text-3xl font-bold text-foreground font-heading', isTamil && 'font-tamil')}>
-                        {isTamil ? 'அக்ரிமேட்டிற்கு வரவேற்கிறோம்' : 'Welcome back to AgriMate'}
-                    </h1>
-                    <p className={cn('text-muted-foreground', isTamil && 'font-tamil')}>
-                        {isTamil ? 'தொடர உங்கள் தொலைபேசி எண்ணைப் பயன்படுத்தி உள்நுழையவும்' : 'Sign in using your phone number to continue'}
-                    </p>
-                </div>
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-                <div className="bg-card border border-border rounded-2xl p-6 shadow-card">
-                    {step === 'phone' ? (
-                        <form onSubmit={handleSendOtp} className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="phone" className={isTamil ? 'font-tamil' : ''}>
-                                    {isTamil ? 'தொலைபேசி எண்' : 'Phone Number'}
-                                </Label>
-                                <div className="relative">
-                                    <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                    <Input
-                                        id="phone"
-                                        type="tel"
-                                        placeholder="98765 43210"
-                                        className="pl-9"
-                                        value={phone}
-                                        onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                                    />
-                                </div>
-                            </div>
-                            <Button type="submit" className="w-full" disabled={loading}>
-                                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : (
-                                    <>
-                                        <span className={isTamil ? 'font-tamil' : ''}>{isTamil ? 'OTP அனுப்பு' : 'Send OTP'}</span>
-                                        <ArrowRight className="w-4 h-4 ml-2" />
-                                    </>
-                                )}
-                            </Button>
-                        </form>
-                    ) : (
-                        <form onSubmit={handleVerifyOtp} className="space-y-4 animate-slide-up">
-                            <div className="space-y-2">
-                                <Label htmlFor="otp" className={isTamil ? 'font-tamil' : ''}>
-                                    {isTamil ? 'OTP ஐ உள்ளிடவும்' : 'Enter OTP'}
-                                </Label>
-                                <div className="relative">
-                                    <KeyRound className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                    <Input
-                                        id="otp"
-                                        type="text"
-                                        placeholder="1234"
-                                        className="pl-9 tracking-widest text-lg"
-                                        maxLength={4}
-                                        value={otp}
-                                        onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                                    />
-                                </div>
-                                <p className="text-xs text-muted-foreground text-center">
-                                    {isTamil ? 'விளக்க நோக்கத்திற்காக 1234 ஐப் பயன்படுத்தவும்' : 'Use 1234 for demo purposes'}
-                                </p>
-                            </div>
-                            <Button type="submit" className="w-full" disabled={loading}>
-                                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : (
-                                    <>
-                                        <span className={isTamil ? 'font-tamil' : ''}>{isTamil ? 'சரிபார்த்து உள்நுழிக' : 'Verify & Login'}</span>
-                                        <ArrowRight className="w-4 h-4 ml-2" />
-                                    </>
-                                )}
-                            </Button>
-                            <button
-                                type="button"
-                                onClick={() => setStep('phone')}
-                                className={cn('w-full text-sm text-muted-foreground hover:text-primary transition-colors', isTamil && 'font-tamil')}
-                            >
-                                {isTamil ? 'தொலைபேசி எண்ணை மாற்றவும்' : 'Change phone number'}
-                            </button>
-                        </form>
-                    )}
-                </div>
+    if (!identifier.trim()) {
+      toast.error(t('valIdentifierRequired'));
+      return;
+    }
 
-                <div className="text-center">
-                    <p className={cn('text-sm text-muted-foreground', isTamil && 'font-tamil')}>
-                        {isTamil ? 'கணக்கு இல்லையா?' : "Don't have an account?"}{' '}
-                        <Link to="/signup" className="text-primary font-medium hover:underline">
-                            {isTamil ? 'பதிவு செய்யவும்' : 'Sign Up'}
-                        </Link>
-                    </p>
-                </div>
-            </div>
+    if (!password) {
+      toast.error(t('valPasswordRequired'));
+      return;
+    }
+
+    setLoading(true);
+    const { error } = await login(identifier.trim(), password, rememberMe);
+    setLoading(false);
+
+    if (error) {
+      toast.error(t('loginError'));
+      return;
+    }
+
+    toast.success(t('loginSuccess'));
+    const searchParams = new URLSearchParams(location.search);
+    const redirect = searchParams.get('redirect') || '/';
+    navigate(redirect, { replace: true });
+  };
+
+  const handleFillDemo = () => {
+    setIdentifier('9876543210');
+    setPassword('Farmer@123');
+    toast.info(isTamil ? 'மாதிரி விவரங்கள் நிரப்பப்பட்டன' : 'Demo credentials applied');
+  };
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 relative safe-top safe-bottom">
+      {/* Top Bar: Back to Home & Prominent Bilingual Language Switcher */}
+      <div className="w-full max-w-md flex items-center justify-between mb-2 px-1">
+        <Link
+          to="/"
+          className="p-2 rounded-xl bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors touch-feedback"
+          title="Home"
+        >
+          <ArrowRight className="w-4 h-4 rotate-180" />
+        </Link>
+
+        {/* Visible Language Switcher: English | தமிழ் */}
+        <LanguageSwitcher variant="segmented" size="md" />
+      </div>
+
+      <div className="w-full max-w-md space-y-5 animate-fade-in">
+        {/* Header Section */}
+        <div className="text-center space-y-1.5 pt-2">
+          <div className="mx-auto w-14 h-14 bg-gradient-primary rounded-2xl flex items-center justify-center shadow-primary mb-3">
+            <Sprout className="w-7 h-7 text-primary-foreground" />
+          </div>
+
+          {/* Welcome to Agrimate / Agrimate-க்கு உங்களை வரவேற்கிறோம் */}
+          <h1 className={cn('text-2xl sm:text-3xl font-bold text-foreground font-heading', isTamil && 'font-tamil')}>
+            {t('welcomeToAgrimate')}
+          </h1>
+
+          {/* Login to Your Account / உங்கள் கணக்கில் உள்நுழையவும் */}
+          <p className={cn('text-sm text-muted-foreground', isTamil && 'font-tamil')}>
+            {t('loginToAccount')}
+          </p>
         </div>
-    );
+
+        {/* Login Card */}
+        <div className="bg-card border border-border rounded-2xl p-6 sm:p-7 shadow-card relative overflow-hidden">
+          <form onSubmit={handleLogin} className="space-y-4">
+            {/* Email Address / Mobile Number */}
+            <div className="space-y-1.5">
+              <Label htmlFor="identifier" className={cn('text-xs font-semibold text-foreground', isTamil && 'font-tamil')}>
+                {t('emailOrMobile')}
+              </Label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="identifier"
+                  type="text"
+                  placeholder={t('emailOrMobilePlaceholder')}
+                  className="pl-9 text-sm rounded-xl"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  autoComplete="username"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Password with Show / Hide Password */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password" className={cn('text-xs font-semibold text-foreground', isTamil && 'font-tamil')}>
+                  {t('password')}
+                </Label>
+                {/* Forgot Password? / கடவுச்சொல்லை மறந்துவிட்டீர்களா? */}
+                <button
+                  type="button"
+                  onClick={() => setForgotModalOpen(true)}
+                  className={cn(
+                    'text-xs text-primary font-medium hover:underline touch-feedback',
+                    isTamil && 'font-tamil'
+                  )}
+                >
+                  {t('forgotPassword')}
+                </button>
+              </div>
+
+              <div className="relative">
+                <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder={t('passwordPlaceholder')}
+                  className="pl-9 pr-10 text-sm rounded-xl"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground transition-colors p-0.5"
+                  title={t('showHidePassword')}
+                  aria-label={showPassword ? t('hidePassword') : t('showPassword')}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Remember Me / என்னை நினைவில் வைத்திருக்கவும் */}
+            <div className="flex items-center justify-between pt-1">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="rememberMe"
+                  checked={rememberMe}
+                  onCheckedChange={(checked) => setRememberMe(Boolean(checked))}
+                />
+                <Label
+                  htmlFor="rememberMe"
+                  className={cn('text-xs font-medium text-muted-foreground cursor-pointer select-none', isTamil && 'font-tamil')}
+                >
+                  {t('rememberMe')}
+                </Label>
+              </div>
+
+              {/* Quick Demo Credentials Helper */}
+              <button
+                type="button"
+                onClick={handleFillDemo}
+                className="text-[11px] text-muted-foreground/80 hover:text-primary flex items-center gap-1 transition-colors"
+                title="Fill demo credentials"
+              >
+                <Sparkles className="w-3 h-3 text-harvest" />
+                <span className={isTamil ? 'font-tamil' : ''}>{t('fillDemoCredentials')}</span>
+              </button>
+            </div>
+
+            {/* Login Button / உள்நுழைக */}
+            <Button
+              type="submit"
+              className="w-full rounded-xl py-2.5 font-semibold text-sm shadow-primary hover:opacity-95 transition-all mt-2"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <span className={cn(isTamil && 'font-tamil')}>{t('loggingIn')}</span>
+                </>
+              ) : (
+                <>
+                  <span className={cn(isTamil && 'font-tamil')}>{t('login')}</span>
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </>
+              )}
+            </Button>
+          </form>
+
+          {/* Demo account banner hint */}
+          <div className="mt-4 pt-3 border-t border-border/60 text-center">
+            <p className="text-[11px] text-muted-foreground">
+              <span className="font-semibold text-foreground/80">
+                {isTamil ? 'மாதிரி கணக்கு: ' : 'Demo Account: '}
+              </span>
+              <span className="font-mono text-primary font-medium">9876543210</span> / <span className="font-mono text-primary font-medium">Farmer@123</span>
+            </p>
+          </div>
+        </div>
+
+        {/* Footer: Don't have an account? Sign Up / கணக்கு இல்லையா? பதிவு செய்யவும் */}
+        <div className="text-center">
+          <p className={cn('text-sm text-muted-foreground', isTamil && 'font-tamil')}>
+            {t('dontHaveAccount')}{' '}
+            <Link
+              to="/signup"
+              className={cn(
+                'text-primary font-semibold hover:underline inline-flex items-center gap-0.5',
+                isTamil && 'font-tamil'
+              )}
+            >
+              {t('signUp')}
+            </Link>
+          </p>
+        </div>
+      </div>
+
+      {/* Forgot Password Modal */}
+      <ForgotPasswordModal
+        open={forgotModalOpen}
+        onOpenChange={setForgotModalOpen}
+        initialIdentifier={identifier}
+      />
+    </div>
+  );
 };
 
 export default SignIn;

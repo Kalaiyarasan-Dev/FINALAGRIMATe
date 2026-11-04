@@ -15,7 +15,8 @@ import {
   ChevronRight,
   Shield,
   Edit,
-  Check
+  Check,
+  LogOut
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -28,7 +29,7 @@ interface ProfileData {
 const Profile: React.FC = () => {
   const navigate = useNavigate();
   const { isTamil, language, setLanguage } = useLanguage();
-  const { profile: authProfile, updateProfile } = useAuth();
+  const { profile: authProfile, updateProfile, signOut } = useAuth();
   
   // Profile State
   const [profile, setProfile] = useState<ProfileData>(() => {
@@ -75,6 +76,18 @@ const Profile: React.FC = () => {
     });
 
     toast.success(isTamil ? 'சுயவிவரம் சேமிக்கப்பட்டது!' : 'Profile updated successfully!');
+  };
+
+  const handleLanguageSelect = async (lang: 'en' | 'ta') => {
+    setLanguage(lang);
+    await updateProfile({ preferred_language: lang });
+    toast.success(lang === 'ta' ? 'மொழி தமிழுக்கு மாற்றப்பட்டது' : 'Language changed to English');
+  };
+
+  const handleLogout = async () => {
+    await signOut();
+    toast.success(isTamil ? 'வெற்றிகரமாக வெளியேறிவிட்டீர்கள்' : 'Logged out successfully');
+    navigate('/signin');
   };
 
   const menuItems = [
@@ -224,7 +237,7 @@ const Profile: React.FC = () => {
             </div>
             <div className="flex rounded-xl border border-border overflow-hidden">
               <button
-                onClick={() => setLanguage('en')}
+                onClick={() => handleLanguageSelect('en')}
                 className={cn(
                   'px-4 py-2 text-sm font-medium transition-colors',
                   language === 'en'
@@ -232,10 +245,10 @@ const Profile: React.FC = () => {
                     : 'bg-background text-muted-foreground'
                 )}
               >
-                EN
+                English
               </button>
               <button
-                onClick={() => setLanguage('ta')}
+                onClick={() => handleLanguageSelect('ta')}
                 className={cn(
                   'px-4 py-2 text-sm font-medium transition-colors font-tamil',
                   language === 'ta'
@@ -324,6 +337,19 @@ const Profile: React.FC = () => {
               </button>
             );
           })}
+        </div>
+
+        {/* Logout Button */}
+        <div className="pt-1">
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center gap-2 p-3.5 rounded-2xl border border-destructive/20 bg-destructive/10 text-destructive hover:bg-destructive/15 transition-all text-sm font-semibold touch-feedback shadow-sm"
+          >
+            <LogOut className="w-4 h-4" />
+            <span className={cn(isTamil && 'font-tamil')}>
+              {isTamil ? 'வெளியேறுக' : 'Logout'}
+            </span>
+          </button>
         </div>
 
         {/* Version */}
