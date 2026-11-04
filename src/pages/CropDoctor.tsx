@@ -46,6 +46,7 @@ const CropDoctor: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [diagnosis, setDiagnosis] = useState<DiagnosisResult | null>(null);
+  const [analysisError, setAnalysisError] = useState<{ title: string; message: string; code?: string } | null>(null);
   const [analysisSource, setAnalysisSource] = useState<'gemini' | 'local'>('gemini');
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -137,11 +138,12 @@ const CropDoctor: React.FC = () => {
       }
 
       setIsAnalyzing(true);
+      setAnalysisError(null);
       try {
-        const { dataUrl } = await downscaleImageFile(file, 1200);
+        const { dataUrl, mimeType } = await downscaleImageFile(file, 1200);
         setSelectedImage(dataUrl);
-        await runImageAnalysis(dataUrl);
-      } catch (err) {
+        await runImageAnalysis(dataUrl, mimeType);
+      } catch (err: any) {
         console.error('Image loading error:', err);
         toast.error(isTamil ? 'படம் ஏற்றுவதில் பிழை' : 'Failed to load image');
         setIsAnalyzing(false);
@@ -153,28 +155,30 @@ const CropDoctor: React.FC = () => {
     setSelectedImage(preset.image);
     setIsAnalyzing(true);
     setDiagnosis(null);
+    setAnalysisError(null);
     try {
       const res = await fetch(preset.image);
       const blob = await res.blob();
       const reader = new FileReader();
       reader.onloadend = async () => {
         const base64data = reader.result as string;
-        await runImageAnalysis(base64data, preset.hint);
+        await runImageAnalysis(base64data, blob.type || 'image/jpeg');
       };
       reader.readAsDataURL(blob);
     } catch {
-      runImageAnalysis(preset.image, preset.hint);
+      await runImageAnalysis(preset.image, 'image/jpeg');
     }
   };
 
-  const runImageAnalysis = async (dataUrl: string, hint?: string) => {
+  const runImageAnalysis = async (dataUrl: string, mimeType = 'image/jpeg') => {
     setIsAnalyzing(true);
     setDiagnosis(null);
+    setAnalysisError(null);
     
     try {
-      const result = await classifyPlantDiseaseFromImage(dataUrl, hint);
+      const result = await classifyPlantDiseaseFromImage(dataUrl, mimeType);
       setDiagnosis(result);
-      setAnalysisSource(result.confidence > 0 ? 'gemini' : 'local');
+      setAnalysisSource('gemini');
 
       if (user && result.status !== 'unclear' && result.status !== 'not_plant') {
         try {
@@ -212,15 +216,39 @@ const CropDoctor: React.FC = () => {
             : 'Plant disease analyzed successfully with AI!'
         );
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Diagnosis error:', err);
-      toast.error(
-        isTamil 
-          ? 'நோய் கண்டறிதலில் பிழை ஏற்பட்டது. மாதிரி தரவு காட்டப்படுகிறது.' 
-          : 'Analysis error. Displaying verified agronomic baseline.'
-      );
-      setDiagnosis(fallbackDiseaseDatabase.paddy.blight);
-      setAnalysisSource('local');
+      const code = err?.code || 'UNKNOWN_ERROR';
+      let title = isTamil ? 'கண்டறிதலில் பிழை' : 'Diagnosis Error';
+      let message =
+        err?.message ||
+        (isTamil ? 'AI சேவையை தொடர்பு கொள்ள முடியவில்லை.' : 'Failed to analyze crop image.');
+
+      if (code === 'API_KEY_MISSING') {
+        title = isTamil ? 'Gemini API சாவி தேவை' : 'Gemini API Key Required';
+        message = isTamil
+          ? 'பயிர்களை பகுப்பாய்வு செய்ய .env கோப்பில் உங்கள் GEMINI_API_KEY சேர்க்கவும். https://aistudio.google.com/ தளத்தில் இலவசமாக பெறலாம்.'
+          : 'Please add your GEMINI_API_KEY to the .env file in the project directory, then click Retry. You can obtain a free key at https://aistudio.google.com/.';
+      } else if (code === 'QUOTA_EXCEEDED') {
+        title = isTamil ? 'அனுமதிக்கப்பட்ட வரம்பு முடிந்தது' : 'Quota Limit Exceeded';
+        message = isTamil
+          ? 'API பயன்பாட்டு வரம்பு முடிந்தது. சிறிது நேரம் கழித்து மீண்டும் முயற்சிக்கவும்.'
+          : 'Google Gemini API quota limit reached. Please wait a minute and try again.';
+      } else if (code === 'INVALID_API_KEY') {
+        title = isTamil ? 'தவறான API சாவி' : 'Invalid API Key';
+        message = isTamil
+          ? 'வழங்கப்பட்ட API சாவி தவறானது. Google AI Studio-வில் சாவியை சரிபார்க்கவும்.'
+          : 'The provided Gemini API key is invalid or unauthorized. Please verify your key in Google AI Studio.';
+      } else if (code === 'NETWORK_ERROR') {
+        title = isTamil ? 'இணைய இணைப்பு தோல்வி' : 'Network Connection Error';
+        message = isTamil
+          ? 'Gemini சேவையகத்தை தொடர்பு கொள்ள முடியவில்லை. உங்கள் இணைய இணைப்பை சரிபார்க்கவும்.'
+          : 'Unable to connect to Google Gemini API servers. Please check your internet connection.';
+      }
+
+      setAnalysisError({ title, message, code });
+      setDiagnosis(null);
+      toast.error(title);
     } finally {
       setIsAnalyzing(false);
     }
@@ -281,6 +309,7 @@ const CropDoctor: React.FC = () => {
   const clearImage = () => {
     setSelectedImage(null);
     setDiagnosis(null);
+    setAnalysisError(null);
     setSelectedSymptoms([]);
     if (fileInputRef.current) fileInputRef.current.value = '';
     if (cameraInputRef.current) cameraInputRef.current.value = '';
@@ -667,6 +696,51 @@ const CropDoctor: React.FC = () => {
           </div>
         )}
 
+        {/* Error Alert Banner when Gemini API fails */}
+        {analysisError && !isAnalyzing && (
+          <div className="bg-destructive/10 border border-destructive/30 rounded-2xl p-6 text-foreground shadow-card space-y-4 animate-slide-up">
+            <div className="flex items-start gap-3.5">
+              <div className="p-2.5 rounded-xl bg-destructive/15 text-destructive flex-shrink-0">
+                <AlertCircle className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <h3 className={cn('text-base font-bold text-foreground', isTamil && 'font-tamil')}>
+                    {analysisError.title}
+                  </h3>
+                  {analysisError.code && (
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-destructive/20 text-destructive font-semibold">
+                      {analysisError.code}
+                    </span>
+                  )}
+                </div>
+                <p className={cn('text-xs sm:text-sm text-muted-foreground leading-relaxed', isTamil && 'font-tamil')}>
+                  {analysisError.message}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 pt-1 pl-12">
+              {selectedImage && (
+                <button
+                  onClick={() => runImageAnalysis(selectedImage)}
+                  className="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 flex items-center gap-2 transition-all shadow-sm"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>{isTamil ? 'மீண்டும் முயற்சிக்கவும்' : 'Retry Analysis'}</span>
+                </button>
+              )}
+              <button
+                onClick={clearImage}
+                className="px-4 py-2 rounded-xl bg-muted hover:bg-muted/80 text-foreground text-xs font-semibold flex items-center gap-2 transition-all border border-border"
+              >
+                <X className="w-3.5 h-3.5" />
+                <span>{isTamil ? 'படத்தை நீக்கவும்' : 'Remove Image'}</span>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Diagnosis Result Card */}
         {diagnosis && !isAnalyzing && (
           <div className="space-y-4 animate-slide-up">
@@ -684,6 +758,32 @@ const CropDoctor: React.FC = () => {
                     {diagnosis.cropDetectedEn && (
                       <span className="text-[11px] px-2.5 py-0.5 rounded-full font-semibold bg-muted text-foreground border border-border">
                         🌱 {language === 'ta' ? (diagnosis.cropDetectedTa || diagnosis.cropDetectedEn) : diagnosis.cropDetectedEn}
+                      </span>
+                    )}
+
+                    {/* Plant Health Status Badge */}
+                    {diagnosis.plantHealth && (
+                      <span className={cn(
+                        'text-[11px] px-2.5 py-0.5 rounded-full font-semibold border',
+                        diagnosis.plantHealth.toLowerCase() === 'healthy'
+                          ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+                          : diagnosis.plantHealth.toLowerCase() === 'uncertain'
+                          ? 'bg-amber-500/10 text-amber-600 border-amber-500/20'
+                          : 'bg-rose-500/10 text-rose-600 border-rose-500/20'
+                      )}>
+                        {isTamil 
+                          ? (diagnosis.plantHealth.toLowerCase() === 'healthy' ? 'ஆரோக்கியமானது' : diagnosis.plantHealth.toLowerCase() === 'uncertain' ? 'உறுதியற்றது' : 'நோய் பாதிப்பு')
+                          : diagnosis.plantHealth}
+                      </span>
+                    )}
+
+                    {/* Confidence Level Badge */}
+                    {diagnosis.confidenceLevel && (
+                      <span className="text-[11px] px-2.5 py-0.5 rounded-full font-semibold bg-muted text-foreground border border-border">
+                        {isTamil ? 'நம்பகத்தன்மை: ' : 'Confidence: '}
+                        {isTamil
+                          ? (diagnosis.confidenceLevel.toLowerCase() === 'high' ? 'அதிகம்' : diagnosis.confidenceLevel.toLowerCase() === 'medium' ? 'மிதமானது' : 'குறைவு')
+                          : diagnosis.confidenceLevel}
                       </span>
                     )}
 
@@ -915,6 +1015,24 @@ const CropDoctor: React.FC = () => {
                     )}>
                       <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mt-0.5 flex-shrink-0" />
                       <span>{tip}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Alternative Diagnoses & Differential Possibilities */}
+            {((language === 'ta' ? diagnosis.alternativeDiagnosesTa : diagnosis.alternativeDiagnosesEn)?.length > 0) && (
+              <div className="bg-card rounded-2xl p-5 border border-border shadow-card space-y-2.5">
+                <h3 className={cn('text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5', isTamil && 'font-tamil')}>
+                  <HelpCircle className="w-3.5 h-3.5 text-amber-500" />
+                  <span>{isTamil ? 'மாற்று நோய் சாத்தியங்கள் & சந்தேகங்கள்:' : 'Alternative Diagnoses & Possibilities:'}</span>
+                </h3>
+                <ul className="space-y-1.5">
+                  {(language === 'ta' ? diagnosis.alternativeDiagnosesTa : diagnosis.alternativeDiagnosesEn)!.map((alt, i) => (
+                    <li key={i} className={cn('text-xs text-muted-foreground flex items-start gap-2', isTamil && 'font-tamil')}>
+                      <span className="text-amber-500 font-bold">•</span>
+                      <span>{alt}</span>
                     </li>
                   ))}
                 </ul>
